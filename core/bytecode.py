@@ -95,3 +95,60 @@ def _PrintNote(note, tab=0):
 def _PrintDefault(msg):
 	print_fct = CONF["PRINT_FCT"]
 	print_fct(msg)
+
+def readuleb128(buff):
+	result = ord(buff.read(1))
+	if result > 0x7f:
+		cur = ord(buff.read(1))
+		result = (result & 0x7f) | ((cur & 0x7f) << 7)
+		if cur > 0x7f:
+			cur = ord(buff.read(1))
+			result |= (cur & 0x7f) << 14
+			if cur > 0x7f:
+				cur = ord(buff.read(1))
+				result |= (cur & 0x7f) << 21
+				if cur > 0x7f:
+					cur = ord(buff.read(1))
+					if cur > 0x0f:
+						warning("passible error while decoding")
+					result |= cur << 28
+
+	return result
+
+def utf8_to_string(buff, length):
+	chars = []
+
+	for i in xrange(length):
+		first_char = ord(buff.read(1))
+		value = first_char >> 4
+		if value in (0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07):
+			if first_char == 0:
+				warning("at offset %x: single zero byte illegal" % (buff.get_idx()))
+
+			chars.append(chr(first_char))
+		elif value in (0x0c, 0x0d):
+			second_char = ord(buff.read(1))
+			if (second_char & 0xc0) != 0x80:
+				warning("bad utf8 at offset: %x" % buff.get_idx())
+			value = ((first_char & 0x1f) << 6) | (second_char & 0x3f)
+			if value != 0 and value < 0x80:
+				warning("at offset %x:" % buff.get_idx())
+			chars.append(unichr(value))
+		elif value == 0x0e:
+			second_char = ord(buff.read(1))
+			if second_char & 0xc0 != 0x80:
+				warning('bad utf8 byte %x at offset %x' % (second_char, buff.get_idx()))
+
+			third_char = ord(buff.read(1))
+			if third_char & 0xc0 != 0x80:
+				warning('bad utf8 byte %x at offset %x' % (third_char, buff.get_idx()))
+			
+			value = ((first_char & 0x0f) << 12) | ((second_char & 0x3f) << 6) | (third_char & 0x3f)
+			if value < 0x800:
+				warning('at offset %x: utf8 should have been represented with two-byte encoding' % buff.get_idx())
+
+			chars.append(unichr(value))
+		else:
+			warning('at offset %x: illegal utf8' % buff.get_idx())
+
+	return ''.join(chars).encode('utf-8')

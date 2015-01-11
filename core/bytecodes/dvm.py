@@ -163,15 +163,7 @@ class StringIdItem(object):
 	def __init__(self, buff, cm):
 		self.__CM = cm
 		self.offset = buff.get_idx()
-
-		print "String id item ", self.offset
-
 		self.string_data_off = unpack("=I", buff.read(4))[0]
-		
-		#self.raw_data = buff.read(4)
-		#self.string_data_off = None
-		#if self.raw_data is None:
-			#self.string_data_off = unpack("=I", self.raw_data)[0]
 
 	def get_string_data_off(self):
 		return self.string_data_off
@@ -208,7 +200,6 @@ class TypeIdItem(object):
 		bytecode._PrintDefault("descriptor_idx=%d descriptor_idx_value=%s\n" % (self.descriptor_idx, self.descriptor_idx_value))
 
 	def reload(self):
-		print "reload ", self.descriptor_idx
 		self.descriptor_idx_value = self.__CM.get_string(self.descriptor_idx)
 
 class TypeHIdItem(object):
@@ -417,9 +408,7 @@ class ClassDefItem(object):
 
 		data = buff.read(32)
 		if len(data) == 32:
-			print len(data)
 			data_tuples = unpack("=IIIIIIII", data)
-			print data_tuples
 			self.class_idx = data_tuples[0]#unpack("=I", buff.read(4))[0]
 			self.access_flag = data_tuples[1]#unpack("=I", buff.read(4))[0]
 			self.superclass_idx = data_tuples[2]#unpack("=I", buff.read(4))[0]
@@ -495,7 +484,6 @@ class CodeItem(object):
 	def show(self):
 		print "CODE_ITEM"
 		for i in self.code:
-			print i
 			i.show()
 
 	def reload(self):
@@ -514,7 +502,7 @@ class ClassManager(object):
 		self.__manage_item = {}
 		self.__manage_item_off = []
 
-		self.__string_off = {}
+		self.__strings_off = {}
 		self.__obj_offset = {}
 		self.__item_offset = {}
 		self.__cached_proto = {}
@@ -565,10 +553,8 @@ class ClassManager(object):
 			return self.hook_strings[index]
 
 		try:
-			print "Index ", index
 			off = self.__manage_item["TYPE_STRING_ID_ITEM"][index].get_string_data_off()
 		except IndexError:
-			bytecode.Warning("unknown string item @ %d" % (idx))
 			return "Invalid String"
 
 		try:
@@ -577,9 +563,9 @@ class ClassManager(object):
 					return self.recode_ascii_sting_meth(self.__strings_off[off].get())
 
 				return self.get_ascii_string(self.__strings_off[off].get())
-			return self.__string_off[off].get()
+			return self.__strings_off[off].get()
 		except KeyError:
-			bytecode.Warning("unknown string item")
+			print ("unknown string item")
 			return "Invalid String"
 
 	def get_proto(self, idx):
@@ -745,6 +731,78 @@ class HeaderItem(object):
 		bytecode._PrintDefault("map_off=%x\n" %(self.map_off))
 		bytecode._PrintDefault("string_ids_size=%x, string_ids_off=%x\n" % (self.string_ids_size, self.string_ids_off))
 
+class AnnotationItem(object):
+	def __init__(self, buff, cm):
+		pass
+
+class AnnotationOffItem(object):
+	def __init__(self, buff, cm):
+		pass
+
+class AnnotationSetItem(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+		self.offset = buff.get_idx()
+		self.annotation_off_item = []
+
+		self.size = unpack("=I", buff.read(4))[0]
+		for i in xrange(0, self.size):
+			self.annotation_off_item.append(AnnotationOffItem(buff, cm))
+		
+	def get_annotation_off_item(self):
+		return self.annotation_off_item
+
+	def get_off(self):
+		return self.offset
+
+	def set_off(self, off):
+		self.offset = off
+
+	def reload(self):
+		pass
+
+	def show(self):
+		bytecode._PrintSubBanner("Annotation Set Item")
+		for i in self.annotation_off_item:
+			i.show()
+
+class StringDataItem(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+		self.offset = buff.get_idx()
+		self.utf16_size = bytecode.readuleb128(buff)
+
+		self.data = bytecode.utf8_to_string(buff, self.utf16_size)
+		expected = buff.read(1)
+		if expected != '\x00':
+			pass
+
+	def get_utf16_size(self):
+		return self.utf16_size
+
+	def get_data(self):
+		return self.data
+
+	def get_off(self):
+		return self.offset
+
+	def set_off(self, off):
+		self.offset = off
+
+	def reload(self):
+		pass
+
+	def get(self):
+		return self.data
+
+	def show(self):
+		bytecode._PrintSubBanner("String Data Item")
+		bytecode._PrintDefault("utf16_size=%d data=%s\n" % (self.utf16_size, repr( self.data )))
+
 class MapItem(object):
 	def __init__(self, buff, cm):
 		self.__CM = cm
@@ -754,7 +812,6 @@ class MapItem(object):
 		self.size = unpack("=I", buff.read(4))[0]
 		self.offset = unpack("=I", buff.read(4))[0]
 		self.item = None
-		print self.offset
 		buff.set_idx(self.offset)
 
 		lazy_analysis = self.__CM.get_lazy_analysis()
@@ -780,7 +837,6 @@ class MapItem(object):
 		return self.size
 
 	def next(self, buff, cm):
-		print self.type
 		debug("%s @ 0x%x(%d) %x %x" % (TYPE_MAP_ITEM[self.type], buff.get_idx(), buff.get_idx(), self.size, self.offset))
 
 		if TYPE_MAP_ITEM[self.type] == "TYPE_STRING_ID_ITEM":
@@ -801,8 +857,14 @@ class MapItem(object):
 			self.item = HeaderItem(self.size, buff, cm)
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_ITEM":
 			pass
+			#self.item = [AnnotationItem(buff, cm) for i in xrange(0, self.size)]
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_SET_ITEM":
 			pass
+			#self.item = [AnnotationSetItem for i in xrange(0, self.size)]
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATIONS_DIRECTORY_ITEM":
+			pass
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_STRING_DATA_ITEM":
+			self.item = [ StringDataItem( buff, cm ) for i in xrange(0, self.size) ]
 
 	def get_length(self):
 		return calcsize("=HHII")
@@ -835,10 +897,7 @@ class MapList(object):
 		buff.set_idx(off)
 		self.offset = off
 
-		print "map offset ", off
-
 		self.size = unpack("=I", buff.read(4))[0]
-		print "map size ", self.size
 		self.map_item = []
 
 		for i in xrange(0, self.size):
@@ -852,7 +911,6 @@ class MapList(object):
 				mi.set_item(self)
 				c_item = mi.get_item()
 
-			print "map item type : ", mi.get_type()
 			self.CM.add_type_item(TYPE_MAP_ITEM[mi.get_type()], mi, c_item)
 
 		for i in self.map_item:
