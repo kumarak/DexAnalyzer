@@ -208,6 +208,7 @@ class TypeIdItem(object):
 		bytecode._PrintDefault("descriptor_idx=%d descriptor_idx_value=%s\n" % (self.descriptor_idx, self.descriptor_idx_value))
 
 	def reload(self):
+		print "reload ", self.descriptor_idx
 		self.descriptor_idx_value = self.__CM.get_string(self.descriptor_idx)
 
 class TypeHIdItem(object):
@@ -564,6 +565,7 @@ class ClassManager(object):
 			return self.hook_strings[index]
 
 		try:
+			print "Index ", index
 			off = self.__manage_item["TYPE_STRING_ID_ITEM"][index].get_string_data_off()
 		except IndexError:
 			bytecode.Warning("unknown string item @ %d" % (idx))
@@ -594,6 +596,10 @@ class ClassManager(object):
 		self.__obj_offset[c_item.get_off()] = c_item
 		self.__item_offset[c_item.get_offset()] = item
 
+		sdi = False
+		if type_item == "TYPE_STRING_DATA_ITEM":
+			sdi = True
+
 		if item != None:
 			if isinstance(item, list):
 				for i in item:
@@ -601,15 +607,14 @@ class ClassManager(object):
 					self.__manage_item_off.append(goff)
 					self.__obj_offset[i.get_off()] = i
 
-					#if sdi == True:
-					#	self.__strings_off[goff] = i
+					if sdi == True:
+						self.__strings_off[goff] = i
 			else:
 				self.__manage_item_off.append(c_item.get_offset())
 
 
 class HeaderItem(object):
 	def __init__(self, size, buff, cm):
-		print "HeaderItem"
 		self.__CM = cm
 
 		self.offset = buff.get_idx()
@@ -656,6 +661,89 @@ class HeaderItem(object):
 	def get_obj(self):
 		if self.map_off_obj == None:
 			self.map_off_obj = self.__CM.get_item_by_offset(self.map_off)
+
+		if self.string_off_obj == None:
+			self.string_off_obj = self.__CM.get_item_by_offset(self.string_ids_off)
+
+		if self.type_off_obj == None:
+			self.type_off_obj = self.__CM.get_item_by_offset(self.type_ids_off)
+
+		if self.proto_off_obj == None:
+			self.proto_off_obj = self.__CM.get_item_by_offset(self.proto_ids_off)
+
+		if self.field_off_obj == None:
+			self.field_off_obj = self.__CM.get_item_by_offset(self.field_ids_off)
+
+		if self.method_off_obj == None:
+			self.method_off_obj = self.__CM.get_item_by_offset(self.method_ids_off)
+
+		if self.class_off_obj == None:
+			self.class_off_obj = self.__CM.get_item_by_offset(self.class_defs_off)
+
+		if self.data_off_obj == None:
+			self.data_off_obj = self.__CM.get_item_by_offset(self.data_off)
+
+		self.map_off = self.map_off_obj.get_off() 
+
+		self.string_ids_size = len(self.string_off_obj)
+		self.string_ids_off = self.string_off_obj[0].get_off()
+
+		self.type_ids_size = len(self.type_off_obj.type)
+		self.type_ids_off = self.type_off_obj[0].get_off()
+
+		self.proto_ids_size = len(self.proto_off_obj.proto)
+		self.proto_ids_off = self.proto_off_obj.get_off()
+
+		self.field_ids_size = len(self.field_off_obj.elem)
+		self.field_ids_off = self.field_off_obj.get_off()
+		
+		self.method_ids_size = len(self.method_off_obj.methods)
+		self.method_ids_off = self.method_off_obj.get_off()
+
+		self.class_defs_size = len(self.class_off_obj.class_def)
+		self.class_defs_off = self.class_off_obj.get_off()
+
+		self.data_size = len(self.data_off_obj)
+		self.data_off = self.data_off_obj[0].get_off()
+
+		return pack("=Q", self.magic) +				\
+				pack("=I", self.checksum) +			\
+				pack("=20s", self.signature) +		\
+				pack("=I", self.file_size) +		\
+				pack("=I", self.header_size) +		\
+				pack("=I", self.endian_tag) +		\
+				pack("=I", self.link_size) +		\
+				pack("=I", self.link_off) +			\
+				pack("=I", self.map_off) +			\
+				pack("=I", self.string_ids_size) +	\
+				pack("=I", self.string_ids_off) +	\
+				pack("=I", self.type_ids_size) +	\
+				pack("=I", self.type_ids_off) +		\
+				pack("=I", self.proto_ids_size) +	\
+				pack("=I", self.proto_ids_off) +	\
+				pack("=I", self.field_ids_size) +	\
+				pack("=I", self.field_ids_off) +	\
+				pack("=I", self.method_ids_size) +	\
+				pack("=I", self.method_ids_off) +	\
+				pack("=I", self.class_defs_size) +	\
+				pack("=I", self.class_defs_off) +	\
+				pack("=I", self.data_size) +		\
+				pack("=I", self.data_off)
+
+
+	def get_raw():
+		return self.get_obj()
+
+	def get_length(self):
+		return len(self.get_raw())
+
+	def show(self):
+		bytecode._PrintSubBanner("Header Item")
+		bytecode._PrintDefault("magic=%s, checksum=%s, signature=%s\n" % (self.magic, self.checksum, self.signature))
+		bytecode._PrintDefault("file_size=%x, header_size=%x, endian_tag=%x\n" % (self.file_size, self.header_size, self.endian_tag))
+		bytecode._PrintDefault("link_size=%x, link_off=%x\n" % (self.link_size, self.link_off))
+		bytecode._PrintDefault("map_off=%x\n" %(self.map_off))
+		bytecode._PrintDefault("string_ids_size=%x, string_ids_off=%x\n" % (self.string_ids_size, self.string_ids_off))
 
 class MapItem(object):
 	def __init__(self, buff, cm):
@@ -710,8 +798,7 @@ class MapItem(object):
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_CLASS_DEF_ITEM":
 			self.item = ClassHDefItem(self.size, buff, cm)
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_HEADER_ITEM":
-			pass
-			#self.item = HeaderItem(self.size, buff, cm)
+			self.item = HeaderItem(self.size, buff, cm)
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_ITEM":
 			pass
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_SET_ITEM":
@@ -840,9 +927,8 @@ class DalvikCode(object):
 		bytecode._PrintBanner()
 
 	def show(self):
-		pass
 		#self._begin_show()
-		#self.code.show()
+		self.code.show()
 		#self._end_show()
 
 	def reload(self):
@@ -909,7 +995,6 @@ class DCode(object):
 		idx = 0
 		for i in self.get_instructions():
 			print "%-8d(%08x)" % (nb, idx)
-			print i
 			i.show(nb)
 			print 
 			idx += i.get_length()
