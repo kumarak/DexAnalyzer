@@ -1,5 +1,6 @@
 
 from core import bytecode
+from core import dexobject
 from core.autoconf import CONF, debug
 
 import sys
@@ -148,13 +149,6 @@ class Unresolved(Instruction):
 
 	def get_raw(self):
 		return self.data
-
-class StringDataItem(object):
-	"""
-		This class can parse a string_data_item of a dex file.
-	"""
-	def __init__(self, buff, cm):
-		self.__CM = cm
 
 class StringIdItem(object):
 	"""
@@ -589,6 +583,7 @@ class ClassManager(object):
 		if item != None:
 			if isinstance(item, list):
 				for i in item:
+					print i
 					goff = i.offset
 					self.__manage_item_off.append(goff)
 					self.__obj_offset[i.get_off()] = i
@@ -731,42 +726,6 @@ class HeaderItem(object):
 		bytecode._PrintDefault("map_off=%x\n" %(self.map_off))
 		bytecode._PrintDefault("string_ids_size=%x, string_ids_off=%x\n" % (self.string_ids_size, self.string_ids_off))
 
-class AnnotationItem(object):
-	def __init__(self, buff, cm):
-		pass
-
-class AnnotationOffItem(object):
-	def __init__(self, buff, cm):
-		pass
-
-class AnnotationSetItem(object):
-	"""
-	"""
-	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
-		self.annotation_off_item = []
-
-		self.size = unpack("=I", buff.read(4))[0]
-		for i in xrange(0, self.size):
-			self.annotation_off_item.append(AnnotationOffItem(buff, cm))
-		
-	def get_annotation_off_item(self):
-		return self.annotation_off_item
-
-	def get_off(self):
-		return self.offset
-
-	def set_off(self, off):
-		self.offset = off
-
-	def reload(self):
-		pass
-
-	def show(self):
-		bytecode._PrintSubBanner("Annotation Set Item")
-		for i in self.annotation_off_item:
-			i.show()
 
 class StringDataItem(object):
 	"""
@@ -840,31 +799,70 @@ class MapItem(object):
 		debug("%s @ 0x%x(%d) %x %x" % (TYPE_MAP_ITEM[self.type], buff.get_idx(), buff.get_idx(), self.size, self.offset))
 
 		if TYPE_MAP_ITEM[self.type] == "TYPE_STRING_ID_ITEM":
+			print "TYPE_STRING_ID_ITEM"
 			self.item = [StringIdItem(buff, cm) for i in xrange(0, self.size)]
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_CODE_ITEM":
+			print "TYPE_CODE_ITEM"
 			self.item = CodeItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_TYPE_ID_ITEM":
+			print "TYPE_TYPE_ID_ITEM"
 			self.item = TypeHIdItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_PROTO_ID_ITEM":
+			print "TYPE_PROTO_ID_ITEM"
 			self.item = ProtoHIdItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_FIELD_ID_ITEM":
+			print "TYPE_FIELD_ID_ITEM"
 			self.item = FieldHIdItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_METHOD_ID_ITEM":
+			print "TYPE_METHOD_ID_ITEM"
 			self.item = MethodHIdItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_CLASS_DEF_ITEM":
+			print "TYPE_CLASS_DEF_ITEM"
 			self.item = ClassHDefItem(self.size, buff, cm)
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_HEADER_ITEM":
+			print "TYPE_HEADER_ITEM"
 			self.item = HeaderItem(self.size, buff, cm)
+		
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_ITEM":
-			pass
-			#self.item = [AnnotationItem(buff, cm) for i in xrange(0, self.size)]
+			print "TYPE_ANNOTATION_ITEM"
+			self.item = [dexobject.AnnotationItem(buff, cm) for i in xrange(0, self.size)]
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_SET_ITEM":
-			pass
-			#self.item = [AnnotationSetItem for i in xrange(0, self.size)]
+			print "TYPE_ANNOTATION_SET_ITEM"
+			self.item = [dexobject.AnnotationSetItem(buff, cm) for i in xrange(0, self.size)]
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATIONS_DIRECTORY_ITEM":
-			pass
+			print "TYPE_ANNOTATIONS_DIRECTORY_ITEM"
+			self.item = [dexobject.AnnotationsDirectoryItem(buff, cm) for i in xrange(0, self.size) ]
+
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_STRING_DATA_ITEM":
+			print "TYPE_STRING_DATA_ITEM"
 			self.item = [ StringDataItem( buff, cm ) for i in xrange(0, self.size) ]
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_DEBUG_INFO_ITEM":
+			print "TYPE_DEBUG_INFO_ITEM"
+			self.item = dexobject.DebugInfoItemEmpty(buff, cm)
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_ENCODED_ARRAY_ITEM":
+			print "TYPE_ENCODED_ARRAY_ITEM"
+			self.item = [dexobject.EncodedArrayItem(buff, cm) for i in xrange(0, self.size) ]
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_CLASS_DATA_ITEM":
+			print "TYPE_CLASS_DATA_ITEM : ", self.size
+			self.item = [dexobject.ClassDataItem(buff, cm) for i in xrange(0, self.size)]
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_MAP_LIST":
+			print "TYPE_MAP_LIST"
+		else:
+			print "Find this type : ", self.type
+
 
 	def get_length(self):
 		return calcsize("=HHII")

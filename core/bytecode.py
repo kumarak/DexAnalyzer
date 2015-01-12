@@ -42,13 +42,15 @@ class _Bytecode(object):
 		self.__buff = buff
 		self.__idx = 0
 
+		print "buff length : ", len(buff)
+
 	def read(self, size):
 		if isinstance(size, SV):
 			size = size.value
 
 		buff = self.__buff[self.__idx : self.__idx + size]
 		self.__idx += size
-
+		print "current index : ", self.__idx
 		return buff
 
 	def readat(self, off):
