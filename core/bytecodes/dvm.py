@@ -326,6 +326,15 @@ class FieldIdItem(object):
 		self.type_idx_value = self.__CM.get_type(self.type_idx)
 		self.name_idx_value = self.__CM.get_string(self.name_idx)
 
+	def get_class_name(self):
+		return self.class_idx_value
+
+	def get_type(self):
+		return self.type_idx_value
+
+	def get_name(self):
+		return self.name_idx_value
+
 class FieldHIdItem(object):
 	"""
 	"""
@@ -344,6 +353,12 @@ class FieldHIdItem(object):
 	def reload(self):
 		for i in self.elem:
 			i.reload()
+
+	def get(self, idx):
+		try:
+			return self.elem[idx]
+		except IndexError:
+			return -1
 
 class MethodIdItem(object):
 	"""
@@ -593,6 +608,25 @@ class ClassManager(object):
 			else:
 				self.__manage_item_off.append(c_item.get_offset())
 
+	def get_next_offset_item(self, idx):
+		for i in self.__manage_item_off:
+			if i > idx:
+				return i
+		return idx
+
+	def get_field(self, idx):
+		field = self.__manage_item["TYPE_FIELD_ID_ITEM"].get(idx)
+		return [field.get_class_name(), field.get_type(), field.get_name()]
+
+	def get_field_ref(self, idx):
+		return self.__manage_item["TYPE_FIELD_ID_ITEM"].get(idx)
+
+	def get_method(self, idx):
+		method = self.__manage_item["TYPE_METHOD_ID_ITEM"].get(idx)
+		return method.get_list()
+
+	def get_method_ref(self, idx):
+		return self.__manage_item["TYPE_METHOD_ID_ITEM"].get(idx)
 
 class HeaderItem(object):
 	def __init__(self, size, buff, cm):

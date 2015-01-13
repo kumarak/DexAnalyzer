@@ -97,7 +97,10 @@ class EncodedMethod(object):
 
 	def get_code_off(self):
 		return self.code_off
-		
+
+	def reload(self):
+		pass
+
 class AnnotationElement(object):
 	"""
 	"""
@@ -155,7 +158,7 @@ class DebugInfoItemEmpty(object):
 	"""
 	def __init__(self, buff, cm):
 		self.__CM = cm
-		buff.offset = buff.get_idx()
+		self.offset = buff.get_idx()
 		self.__buff = buff
 		self.__raw 	= ""
 
@@ -422,6 +425,9 @@ class AnnotationOffItem(object):
 	def __init__(self, buff, cm):
 		pass
 
+	def show(self):
+		pass
+
 
 class AnnotationSetItem(object):
 	"""
@@ -466,6 +472,50 @@ class AnnotationsDirectoryItem(object):
 		self.annotated_parameters_size = unpack("=I", buff.read(4))[0]
 
 		self.field_annotations = []
+		for i in xrange(0, self.annotated_fields_size):
+			self.field_annotations.append(FieldAnnotation(buff, cm))
+
+		self.method_annotations = []
+		for i in xrange(0, self.annotated_methods_size):
+			self.method_annotations.append(MethodAnnotation(buff, cm))
+
+		self.parameter_annotations = []
+		for i in xrange(0, self.annotated_parameters_size):
+			self.parameter_annotations.append(ParameterAnnotation(buff, cm))
+
+	def get_class_annotation_off(self):
+		return self.class_annotations_off
+
+	def get_annotated_fields_size(self):
+		return self.annotated_fields_size
+
+	def get_annotated_methods_size(self):
+		return self.annotated_methods_size
+
+	def get_annotated_parameters_size(self):
+		return self.annotated_parameters_size
+
+	def get_method_annotations(self):
+		return self.method_annotations
+
+	def get_field_annotations(self):
+		return self.field_annotations
+
+	def get_parameter_annotations(self):
+		return self.parameter_annotations
 
 	def get_off(self):
 		return self.offset
+
+	def set_off(self, offset):
+		self.offset = offset
+
+	def reload(self):
+		pass
+
+
+	def get_off(self):
+		return self.offset
+
+	def show(self):
+		pass
