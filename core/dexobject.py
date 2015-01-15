@@ -25,15 +25,28 @@ class DexObject(object):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
+		self.CM = cm
 		self.offset = buff.get_idx()
 
-class EncodedField(object):
+	def get_off(self):
+		return self.offset
+
+	def set_off(self, off):
+		self.offset = off
+
+	def reload(self):
+		pass
+
+	def show(self):
+		pass
+
+class EncodedField(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm 
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
+		#self.__CM = cm 
+		#self.offset = buff.get_idx()
 
 		self.field_idx_diff = bytecode.readuleb128(buff)
 		self.access_flags = bytecode.readuleb128(buff)
@@ -47,7 +60,7 @@ class EncodedField(object):
 		self.access_flags_string = None
 
 	def reload(self):
-		name = self.__CM.get_field(self.field_idx)
+		name = self.CM.get_field(self.field_idx)
 		self.class_name = name[0]
 		self.name = name[2]
 		self.proto = ''.join(i for i in name[1])
@@ -64,12 +77,13 @@ class EncodedField(object):
 	def adjust_idx(self, val):
 		self.field_idx = self.field_idx_diff + val
 
-class EncodedMethod(object):
+class EncodedMethod(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
+		#self.__CM = cm
+		#self.offset = buff.get_idx()
 
 		self.method_idx_diff = bytecode.readuleb128(buff)
 		self.access_flags = bytecode.readuleb128(buff)
@@ -101,21 +115,19 @@ class EncodedMethod(object):
 	def reload(self):
 		pass
 
-class AnnotationElement(object):
+class AnnotationElement(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 
 		#self.name_idx = bytecode.readuleb128(buff)
 
-class EncodedAnnotation(object):
+class EncodedAnnotation(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 
 		self.type_idx = bytecode.readuleb128(buff)
 		self.size = bytecode.readuleb128(buff)
@@ -145,20 +157,19 @@ class EncodedAnnotation(object):
 
 		return length
 
-class StringDataItem(object):
+class StringDataItem(DexObject):
 	"""
 		This class can parse a string_data_item of a dex file.
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
+		DexObject.__init__(self, buff, cm)
 
 
-class DebugInfoItemEmpty(object):
+class DebugInfoItemEmpty(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 		self.__buff = buff
 		self.__raw 	= ""
 
@@ -171,14 +182,11 @@ class DebugInfoItemEmpty(object):
 	def reload(self):
 		offset = self.offset
 		
-		n = self.__CM.get_next_offset_item(offset)
+		n = self.CM.get_next_offset_item(offset)
 		s_idx = self.__buff.get_idx()
 		self.__buff.set_idx(offset)
 		self.__raw = self.__buff.read(n - offset)
 		self.__buff.set_idx(s_idx)
-
-	def show(self):
-		pass
 
 	def get_obj(self):
 		return []
@@ -189,13 +197,11 @@ class DebugInfoItemEmpty(object):
 	def get_length(self):
 		return len(self.__raw)
 
-class EncodedValue(object):
+class EncodedValue(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
-
+		DexObject.__init__(self, buff, cm)
 		self.val = unpack("=B", buff.read(1))[0]
 		self.value_arg = self.val >> 5
 		self.value_type = self.val & 0x1f
@@ -283,12 +289,11 @@ class EncodedValue(object):
 		else:
 			return len(pack("=B", self.val)) + len(bytecode.object_to_str(self.value))
 
-class EncodedArray(object):
+class EncodedArray(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 		self.size = bytecode.readuleb128(buff)
 
 		self.values = []
@@ -321,30 +326,18 @@ class EncodedArray(object):
 
 		return length
 
-class EncodedArrayItem(object):
+class EncodedArrayItem(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 		self.value = EncodedArray(buff, cm)
 
-	def get_off(self):
-		return self.offset
-
-	def reload(self):
-		pass
-
-	def show(self):
-		pass
-
-class ClassDataItem(object):
+class ClassDataItem(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
-
+		DexObject.__init__(self, buff, cm)
 		print "init class data item"
 		self.static_fields_size = bytecode.readuleb128(buff)
 		print "static field size ", self.static_fields_size
@@ -383,10 +376,6 @@ class ClassDataItem(object):
 
 			l.append(el)
 
-	def get_off(self):
-		return self.offset
-
-
 	def reload(self):
 		for i in self.static_fields:
 			i.reload()
@@ -400,43 +389,23 @@ class ClassDataItem(object):
 		for i in self.virtual_methods:
 			i.reload()
 
-	def show(self):
-		pass
-
-
-class AnnotationItem(object):
+class AnnotationItem(DexObject):
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
-
+		DexObject.__init__(self, buff, cm)
 		self.visibility = unpack("=B", buff.read(1))[0]
 		self.annotation = EncodedAnnotation(buff, cm)
 
-	def get_off(self):
-		return self.offset
-
-	def reload(self):
-		pass
-
-	def show(self):
-		pass
-
-class AnnotationOffItem(object):
+class AnnotationOffItem(DexObject):
 	def __init__(self, buff, cm):
-		pass
-
-	def show(self):
-		pass
+		DexObject.__init__(self, buff, cm)
 
 
-class AnnotationSetItem(object):
+class AnnotationSetItem(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 		self.annotation_off_item = []
-		print "offset : ", self.offset
 
 		self.size = unpack("=I", buff.read(4))[0]
 		for i in xrange(0, self.size):
@@ -445,26 +414,16 @@ class AnnotationSetItem(object):
 	def get_annotation_off_item(self):
 		return self.annotation_off_item
 
-	def get_off(self):
-		return self.offset
-
-	def set_off(self, off):
-		self.offset = off
-
-	def reload(self):
-		pass
-
 	def show(self):
 		bytecode._PrintSubBanner("Annotation Set Item")
 		for i in self.annotation_off_item:
 			i.show()
 
-class AnnotationsDirectoryItem(object):
+class AnnotationsDirectoryItem(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 
 		self.class_annotations_off = unpack("=I", buff.read(4))[0]
 		self.annotated_fields_size = unpack("=I", buff.read(4))[0]
@@ -504,12 +463,6 @@ class AnnotationsDirectoryItem(object):
 	def get_parameter_annotations(self):
 		return self.parameter_annotations
 
-	def get_off(self):
-		return self.offset
-
-	def set_off(self, offset):
-		self.offset = offset
-
 	def reload(self):
 		pass
 
@@ -520,29 +473,28 @@ class AnnotationsDirectoryItem(object):
 	def show(self):
 		pass
 
-class TypeItem(object):
+class TypeItem(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
+		DexObject.__init__(self, buff, cm)
 		self.type_idx = unpack("=H", buff.read(2))[0]
 
 	def get_type_idx(self):
 		return self.type_idx
 
 	def get_string(self):
-		return self.__CM.get_type(self.type_idx)
+		return self.CM.get_type(self.type_idx)
 
 	def show(self):
 		bytecode._PrintSubBanner("Type Item")
 		bytecode._PrintDefault("type_idx=%d\n" % self.type_idx)
 
-class TypeList(object):
+class TypeList(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		self.__CM = cm
-		self.offset = buff.get_idx()
+		DexObject.__init__(self, buff, cm)
 
 		self.pad = ""
 		if self.offset % 4 != 0:
@@ -557,9 +509,6 @@ class TypeList(object):
 
 	def get_pad(self):
 		return self.pad
-
-	def get_off(self):
-		return self.offset
 
 	def get_type_list_off(self):
 		return self.offset + self.len_pad
