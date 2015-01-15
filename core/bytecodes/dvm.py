@@ -251,7 +251,9 @@ class ProtoIdItem(object):
 
 	def reload(self):
 		self.shorty_idx_value = self.__CM.get_string(self.shorty_idx)
-		pass
+		self.return_type_idx_value = self.__CM.get_string(self.return_type_idx)
+		params = self.__CM.get_type_list(self.parameters_off)
+		self.parameters_off_value = '({})'.format(' '.join(params))
 
 	def show(self):
 		bytecode._PrintSubBanner("Proto Item")
@@ -278,6 +280,12 @@ class ProtoHIdItem(object):
 		for i in xrange(0, size):
 			self.proto.append(ProtoIdItem(buff, cm))
 
+	def get_off(self):
+		return self.offset
+
+	def set_off(self, off):
+		self.offset = off
+
 	def get(self, idx):
 		try:
 			return self.proto[idx]
@@ -289,6 +297,12 @@ class ProtoHIdItem(object):
 
 	def get_raw(self):
 		return ''.join(i.get_raw() for i in self.proto)
+
+	def get_length(self):
+		length = 0
+		for i in self.proto:
+			length += i.get_length()
+		return length
 	
 	def show(self):
 		bytecode._PrintSubBanner("Proto List Item")
@@ -550,6 +564,14 @@ class ClassManager(object):
 
 	def get_lazy_analysis(self):
 		pass
+
+	def get_type_list(self, off):
+		if off == 0:
+			return []
+
+		for i in self.__manage_item["TYPE_TYPE_LIST"]:
+			if i.get_type_list_off() == off:
+				return [type_.get_string() for type_ in i.get_list()]
 
 	def get_type(self, ttype):
 		_type = self.__manage_item["TYPE_TYPE_ID_ITEM"].get(ttype)
@@ -875,6 +897,12 @@ class MapItem(object):
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATIONS_DIRECTORY_ITEM":
 			print "TYPE_ANNOTATIONS_DIRECTORY_ITEM"
 			self.item = [dexobject.AnnotationsDirectoryItem(buff, cm) for i in xrange(0, self.size) ]
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_SET_REF_LIST":
+			pass
+
+		elif TYPE_MAP_ITEM[self.type] == "TYPE_TYPE_LIST":
+			self.item = [dexobject.TypeList(buff, cm) for i in xrange(0, self.size)]
 
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_STRING_DATA_ITEM":
 			print "TYPE_STRING_DATA_ITEM"

@@ -519,3 +519,63 @@ class AnnotationsDirectoryItem(object):
 
 	def show(self):
 		pass
+
+class TypeItem(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+		self.type_idx = unpack("=H", buff.read(2))[0]
+
+	def get_type_idx(self):
+		return self.type_idx
+
+	def get_string(self):
+		return self.__CM.get_type(self.type_idx)
+
+	def show(self):
+		bytecode._PrintSubBanner("Type Item")
+		bytecode._PrintDefault("type_idx=%d\n" % self.type_idx)
+
+class TypeList(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+		self.offset = buff.get_idx()
+
+		self.pad = ""
+		if self.offset % 4 != 0:
+			self.pad = buff.read(self.offset % 4)
+
+		self.len_pad = len(self.pad)
+		self.size = unpack("=I", buff.read(4))[0]
+
+		self.list = []
+		for i in xrange(0, self.size):
+			self.list.append(TypeItem(buff, cm))
+
+	def get_pad(self):
+		return self.pad
+
+	def get_off(self):
+		return self.offset
+
+	def get_type_list_off(self):
+		return self.offset + self.len_pad
+
+	def get_list(self):
+		return self.list
+
+	def get_string(self):
+		return ' '.join(i.get_string() for i in self.list)
+
+	def reload(self):
+		pass
+
+	def show(self):
+		bytecode._PrintSubBanner("Type List")
+		bytecode._PrintDefault("size=%d\n" % self.size)
+
+		for i in self.list:
+			i.show()
