@@ -333,6 +333,9 @@ class EncodedArrayItem(DexObject):
 		DexObject.__init__(self, buff, cm)
 		self.value = EncodedArray(buff, cm)
 
+	def get_value(self):
+		return self.value
+
 class ClassDataItem(DexObject):
 	"""
 	"""
@@ -389,6 +392,13 @@ class ClassDataItem(DexObject):
 		for i in self.virtual_methods:
 			i.reload()
 
+	def set_static_fields(self, value):
+		if value != None:
+			values = value.get_values()
+			if len(values) <= len(self.static_fields):
+				for i in xrange(0, len(values)):
+					self.static_fields[i].set_init_value(values[i])
+
 class AnnotationItem(DexObject):
 	def __init__(self, buff, cm):
 		DexObject.__init__(self, buff, cm)
@@ -398,6 +408,11 @@ class AnnotationItem(DexObject):
 class AnnotationOffItem(DexObject):
 	def __init__(self, buff, cm):
 		DexObject.__init__(self, buff, cm)
+		self.annotation_off = unpack("=I", buff.read(4))[0]
+
+	def show(self):
+		bytecode._PrintSubBanner("Annotation Off Item")
+		bytecode._PrintDefault("annotation_off=0x%x\n" % self.annotation_off)
 
 
 class AnnotationSetItem(DexObject):
@@ -519,12 +534,26 @@ class TypeList(DexObject):
 	def get_string(self):
 		return ' '.join(i.get_string() for i in self.list)
 
-	def reload(self):
-		pass
-
 	def show(self):
 		bytecode._PrintSubBanner("Type List")
 		bytecode._PrintDefault("size=%d\n" % self.size)
 
 		for i in self.list:
 			i.show()
+
+class AnnotationSetRefItem(DexObject):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		DexObject.__init__(self, buff, cm)
+		self.annotations_off = unpack("=H", buff.read(2))[0]
+
+class AnnotationSetRefList(DexObject):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		DexObject.__init__(self, buff, cm)
+		self.list = []
+		self.size = unpack("=I", buff.read(4))[0]
+		for i in xrange(0, self.size):
+			self.list.append(AnnotationSetRefItem(buff, cm))
