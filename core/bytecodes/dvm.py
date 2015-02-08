@@ -71,268 +71,202 @@ TYPE_DESCRIPTOR = {
 	'D': 'double'
 }
 
-DALVIK_OPCODES_FORMAT = {
-	0x00 : [dexinstructions.Instruction10x, [ "nop" ] ],
-	0x01 : [dexinstructions.Instruction12x, [ "move" ] ],
-	0x02 : [dexinstructions.Instruction22x, [ "move/from16" ] ],
-	0x03 : [dexinstructions.Instruction32x, [ "move/16" ] ],
-	0x04 : [dexinstructions.Instruction12x, [ "move-wide" ] ],
-  	0x05 : [dexinstructions.Instruction22x, [ "move-wide/from16" ] ],
-  	0x06 : [dexinstructions.Instruction32x, [ "move-wide/16" ] ],
-  	0x07 : [dexinstructions.Instruction12x, [ "move-object" ] ],
-  	0x08 : [dexinstructions.Instruction22x, [ "move-object/from16" ] ],
-  	
-  	0x24 : [dexinstructions.Instruction35c, [ "filled-new-array", KIND_TYPE ] ],
-  	0x25 : [dexinstructions.Instruction3rc, [ "filled-new-array/range", KIND_TYPE ] ],
-  	0x26 : [dexinstructions.Instruction31t, [ "fill-array-data" ] ],
-  	0x27 : [dexinstructions.Instruction11x, [ "throw" ] ],
 
-  0x28 : [Instruction10t, [ "goto" ] ],
-  0x29 : [Instruction20t, [ "goto/16" ] ],
-  0x2a : [Instruction30t, [ "goto/32" ] ],
+class PackedSwitch(object):
+	"""
+	"""
+	def __init__(self, buff):
+		self.notes = []
+		self.format_general_size = calcsize("=HHI")
 
-  0x2b : [Instruction31t, [ "packed-switch" ] ],
-  0x2c : [Instruction31t, [ "sparse-switch" ] ],
+		self.ident = unpack("=H", buff[0:2])[0]
+		self.size = unpack("=H", buff[2:4])[0]
+		self.first_key = unpack("=i", buff[4:8])[0]
 
-  0x2d : [Instruction23x, [ "cmpl-float"  ] ],
-  0x2e : [Instruction23x, [ "cmpg-float" ] ],
-  0x2f : [Instruction23x, [ "cmpl-double" ] ],
-  0x30 : [Instruction23x, [ "cmpg-double" ] ],
-  0x31 : [Instruction23x, [ "cmp-long" ] ],
+		self.targets = []
 
-  0x32 : [Instruction22t, [ "if-eq" ] ],
-  0x33 : [Instruction22t, [ "if-ne" ] ],
-  0x34 : [Instruction22t, [ "if-lt" ] ],
-  0x35 : [Instruction22t, [ "if-ge" ] ],
-  0x36 : [Instruction22t, [ "if-gt" ] ],
-  0x37 : [Instruction22t, [ "if-le" ] ],
+		idx = self.format_general_size
 
-  0x38 : [Instruction21t, [ "if-eqz" ] ],
-  0x39 : [Instruction21t, [ "if-nez" ] ],
-  0x3a : [Instruction21t, [ "if-ltz" ] ],
-  0x3b : [Instruction21t, [ "if-gez" ] ],
-  0x3c : [Instruction21t, [ "if-gtz" ] ],
-  0x3d : [Instruction21t, [ "if-lez" ] ],
+		max_size = self.size
+		if (max_size * 4) > len(buff):
+			max_size = len(buff) - idx - 8
 
-  #unused
-  0x3e : [Instruction10x, [ "nop" ] ],
-  0x3f : [Instruction10x, [ "nop" ] ],
-  0x40 : [Instruction10x, [ "nop" ] ],
-  0x41 : [Instruction10x, [ "nop" ] ],
-  0x42 : [Instruction10x, [ "nop" ] ],
-  0x43 : [Instruction10x, [ "nop" ] ],
+		for i in xrange(0, max_size):
+			self.targets.append(unpack("=l", buff[idx:idx + 4])[0])
+			idx += 4
 
-  0x44 : [Instruction23x, [ "aget" ] ],
-  0x45 : [Instruction23x, [ "aget-wide" ] ],
-  0x46 : [Instruction23x, [ "aget-object" ] ],
-  0x47 : [Instruction23x, [ "aget-boolean" ] ],
-  0x48 : [Instruction23x, [ "aget-byte" ] ],
-  0x49 : [Instruction23x, [ "aget-char" ] ],
-  0x4a : [Instruction23x, [ "aget-short" ] ],
-  0x4b : [Instruction23x, [ "aput" ] ],
-  0x4c : [Instruction23x, [ "aput-wide" ] ],
-  0x4d : [Instruction23x, [ "aput-object" ] ],
-  0x4e : [Instruction23x, [ "aput-boolean" ] ],
-  0x4f : [Instruction23x, [ "aput-byte" ] ],
-  0x50 : [Instruction23x, [ "aput-char" ] ],
-  0x51 : [Instruction23x, [ "aput-short" ] ],
+	def add_notes(self, msg):
+		return self.notes
 
-  0x52 : [Instruction22c, [ "iget", KIND_FIELD ] ],
-  0x53 : [Instruction22c, [ "iget-wide", KIND_FIELD ] ],
-  0x54 : [Instruction22c, [ "iget-object", KIND_FIELD ] ],
-  0x55 : [Instruction22c, [ "iget-boolean", KIND_FIELD ] ],
-  0x56 : [Instruction22c, [ "iget-byte", KIND_FIELD ] ],
-  0x57 : [Instruction22c, [ "iget-char", KIND_FIELD ] ],
-  0x58 : [Instruction22c, [ "iget-short", KIND_FIELD ] ],
-  0x59 : [Instruction22c, [ "iput", KIND_FIELD ] ],
-  0x5a : [Instruction22c, [ "iput-wide", KIND_FIELD ] ],
-  0x5b : [Instruction22c, [ "iput-object", KIND_FIELD ] ],
-  0x5c : [Instruction22c, [ "iput-boolean", KIND_FIELD ] ],
-  0x5d : [Instruction22c, [ "iput-byte", KIND_FIELD ] ],
-  0x5e : [Instruction22c, [ "iput-char", KIND_FIELD ] ],
-  0x5f : [Instruction22c, [ "iput-short", KIND_FIELD ] ],
+	def get_op_value(self):
+		return self.ident
 
+	def get_keys(self):
+		return [(self.first_key + i) for i in range(0, len(self.targets))]
 
-  0x60 : [Instruction21c, [ "sget", KIND_FIELD ] ],
-  0x61 : [Instruction21c, [ "sget-wide", KIND_FIELD ] ],
-  0x62 : [Instruction21c, [ "sget-object", KIND_FIELD ] ],
-  0x63 : [Instruction21c, [ "sget-boolean", KIND_FIELD ] ],
-  0x64 : [Instruction21c, [ "sget-byte", KIND_FIELD ] ],
-  0x65 : [Instruction21c, [ "sget-char", KIND_FIELD ] ],
-  0x66 : [Instruction21c, [ "sget-short", KIND_FIELD ] ],
-  0x67 : [Instruction21c, [ "sput", KIND_FIELD ] ],
-  0x68 : [Instruction21c, [ "sput-wide", KIND_FIELD ] ],
-  0x69 : [Instruction21c, [ "sput-object", KIND_FIELD ] ],
-  0x6a : [Instruction21c, [ "sput-boolean", KIND_FIELD ] ],
-  0x6b : [Instruction21c, [ "sput-byte", KIND_FIELD ] ],
-  0x6c : [Instruction21c, [ "sput-char", KIND_FIELD ] ],
-  0x6d : [Instruction21c, [ "sput-short", KIND_FIELD ] ],
+	def get_values(self):
+		return self.get_keys()
 
+	def get_targets(self):
+		return self.targets
 
-  0x6e : [Instruction35c, [ "invoke-virtual", KIND_METH ] ],
-  0x6f : [Instruction35c, [ "invoke-super", KIND_METH ] ],
-  0x70 : [Instruction35c, [ "invoke-direct", KIND_METH ] ],
-  0x71 : [Instruction35c, [ "invoke-static", KIND_METH ] ],
-  0x72 : [Instruction35c, [ "invoke-interface", KIND_METH ] ],
+	def get_output(self, idx=-1):
+		return " ".join("%x" % ((self.first_key + i) for i in range(0, len(self.targets))))
 
-  # unused
-  0x73 : [Instruction10x, [ "nop" ] ],
+	def get_operands(self, idx=-1):
+		return []
 
-  0x74 : [Instruction3rc, [ "invoke-virtual/range", KIND_METH ] ],
-  0x75 : [Instruction3rc, [ "invoke-super/range", KIND_METH ] ],
-  0x76 : [Instruction3rc, [ "invoke-direct/range", KIND_METH ] ],
-  0x77 : [Instruction3rc, [ "invoke-static/range", KIND_METH ] ],
-  0x78 : [Instruction3rc, [ "invoke-interface/range", KIND_METH ] ],
+	def get_formatted_operands(self):
+		return None
 
-  # unused
-  0x79 : [Instruction10x, [ "nop" ] ],
-  0x7a : [Instruction10x, [ "nop" ] ],
+	def get_name(self):
+		return "packed-switch-payload"
 
+	def show_buff(self, idx=-1):
+		buff = self.get_name() + " "
+		buff += "%x" % self.first_key
 
-  0x7b : [Instruction12x, [ "neg-int" ] ],
-  0x7c : [Instruction12x, [ "not-int" ] ],
-  0x7d : [Instruction12x, [ "neg-long" ] ],
-  0x7e : [Instruction12x, [ "not-long" ] ],
-  0x7f : [Instruction12x, [ "neg-float" ] ],
-  0x80 : [Instruction12x, [ "neg-double" ] ],
-  0x81 : [Instruction12x, [ "int-to-long" ] ],
-  0x82 : [Instruction12x, [ "int-to-float" ] ],
-  0x83 : [Instruction12x, [ "int-to-double" ] ],
-  0x84 : [Instruction12x, [ "long-to-int" ] ],
-  0x85 : [Instruction12x, [ "long-to-float" ] ],
-  0x86 : [Instruction12x, [ "long-to-double" ] ],
-  0x87 : [Instruction12x, [ "float-to-int" ] ],
-  0x88 : [Instruction12x, [ "float-to-long" ] ],
-  0x89 : [Instruction12x, [ "float-to-double" ] ],
-  0x8a : [Instruction12x, [ "double-to-int" ] ],
-  0x8b : [Instruction12x, [ "double-to-long" ] ],
-  0x8c : [Instruction12x, [ "double-to-float" ] ],
-  0x8d : [Instruction12x, [ "int-to-byte" ] ],
-  0x8e : [Instruction12x, [ "int-to-char" ] ],
-  0x8f : [Instruction12x, [ "int-to-short" ] ],
+		for i in self.targets:
+			buff += " %x" % i
+
+		return buff
+
+	def show(self, pos):
+		print self.show_buff(pos)
+
+	def get_length(self):
+		return self.format_general_size + (self.size * calcsize('=L'))
+
+	def get_raw(self):
+		return pack("=H", self.ident) + pack("=H", self.size) + pack("=i", self.first_key) + ''.join(pack("=l", i) for i in self.targets)
+
+class SparseSwitch(object):
+	"""
+	"""
+	def __init__(self, buff):
+		self.notes = []
+		self.format_general_size = calcsize("=HH")
+		self.ident = unpack("=H", buff[0:2])[0]
+		self.size = unpack("=H", buff[2:4])[0]
+
+		self.keys = []
+		self.targets = []
+
+		idx = self.format_general_size
+		for i in xrange(0, self.size):
+			self.keys.append(unpack('=l', buff[idx:idx + 4])[0])
+			idx += 4
+
+		for i in xrange(0, self.size):
+			self.targets.append(unpack("=l", buff[idx:idx + 4])[0])
+			idx += 4
+
+	def add_notes(self, msg):
+		self.notes.append(msg)
+
+	def get_notes(self):
+		return self.notes
+
+	def get_op_value(self):
+		return self.ident
+
+	def get_keys(self):
+		return self.keys
+
+	def get_targets(self):
+		return self.targets
+
+	def get_output(self, idx=-1):
+		return " ".join("%x" % i for i in self.keys)
+
+	def get_formatted_operands(self):
+		return None
+
+	def get_name(self):
+		return "sparse-switch-payload"
+
+	def show_buff(self, pos):
+		buff = self.get_name() + " "
+		for i in xrange(0, len(self.keys)):
+			buff += "%x:%x " % (self.keys[i], self.targets[i])
+
+		return buff
+
+	def show(self, pos):
+		print self.show_buff(pos)
+
+	def get_length(self):
+		return self.format_general_size + (self.size * calcsize('<L')) * 2
+
+	def get_raw(self):
+		return pack("=H", self.ident) + pack("=H", self.size) + ''.join(pack("=l", i) for i in self.keys)
 
 
-  0x90 : [Instruction23x, [ "add-int" ] ],
-  0x91 : [Instruction23x, [ "sub-int" ] ],
-  0x92 : [Instruction23x, [ "mul-int" ] ],
-  0x93 : [Instruction23x, [ "div-int" ] ],
-  0x94 : [Instruction23x, [ "rem-int" ] ],
-  0x95 : [Instruction23x, [ "and-int" ] ],
-  0x96 : [Instruction23x, [ "or-int" ] ],
-  0x97 : [Instruction23x, [ "xor-int" ] ],
-  0x98 : [Instruction23x, [ "shl-int" ] ],
-  0x99 : [Instruction23x, [ "shr-int" ] ],
-  0x9a : [Instruction23x, [ "ushr-int" ] ],
-  0x9b : [Instruction23x, [ "add-long" ] ],
-  0x9c : [Instruction23x, [ "sub-long" ] ],
-  0x9d : [Instruction23x, [ "mul-long" ] ],
-  0x9e : [Instruction23x, [ "div-long" ] ],
-  0x9f : [Instruction23x, [ "rem-long" ] ],
-  0xa0 : [Instruction23x, [ "and-long" ] ],
-  0xa1 : [Instruction23x, [ "or-long" ] ],
-  0xa2 : [Instruction23x, [ "xor-long" ] ],
-  0xa3 : [Instruction23x, [ "shl-long" ] ],
-  0xa4 : [Instruction23x, [ "shr-long" ] ],
-  0xa5 : [Instruction23x, [ "ushr-long" ] ],
-  0xa6 : [Instruction23x, [ "add-float" ] ],
-  0xa7 : [Instruction23x, [ "sub-float" ] ],
-  0xa8 : [Instruction23x, [ "mul-float" ] ],
-  0xa9 : [Instruction23x, [ "div-float" ] ],
-  0xaa : [Instruction23x, [ "rem-float" ] ],
-  0xab : [Instruction23x, [ "add-double" ] ],
-  0xac : [Instruction23x, [ "sub-double" ] ],
-  0xad : [Instruction23x, [ "mul-double" ] ],
-  0xae : [Instruction23x, [ "div-double" ] ],
-  0xaf : [Instruction23x, [ "rem-double" ] ],
+class FillArrayData(object):
+	"""
+	"""
+	def __init__(self, buff):
+		self.notes = []
+		self.format_general_size = calcsize("=HHI")
+		self.ident = unpack("=H", buff[0:2])[0]
+		self.element_width = unpack("=H", buff[2:4])[0]
+		self.size = unpack("=I", buff[4:8])[0]
+
+		self.data = buff[self.format_general_size:self.format_general_size + (self.size * self.element_width)]
+
+	def add_note(self, msg):
+		self.notes.append(msg)
+
+	def get_notes(self):
+		return self.notes
+
+	def get_op_value(self):
+		return self.ident
+
+	def get_output(self, idx=-1):
+		buff = ""
+		data = self.get_data()
+
+		buff += repr(data) + " | "
+		for i in xrange(0, len(data)):
+			buff += "\\x%02x" % ord(data[i])
+
+		return buff
+
+	def get_operands(self, idx=-1):
+		return [(OPERAND_RAW, repr(self.get_data()))]
+
+	def get_formatted_operands(self):
+		return None
+
+	def get_name(self):
+		 return "fill-array-data-payload"
+
+	def show_buff(self, pos):
+		buff = self.get_name() + " "
+
+		for i in xrange(0, len(self.data)):
+			buff += "\\x%02x" % ord(self.data[i])
+		return buff	    
+
+	def get_raw(self):
+		return pack("=H", self.ident) + pack("=H", self.element_width) + pack("=I", self.size) + self.data
 
 
-  0xb0 : [Instruction12x, [ "add-int/2addr" ] ],
-  0xb1 : [Instruction12x, [ "sub-int/2addr" ] ],
-  0xb2 : [Instruction12x, [ "mul-int/2addr" ] ],
-  0xb3 : [Instruction12x, [ "div-int/2addr" ] ],
-  0xb4 : [Instruction12x, [ "rem-int/2addr" ] ],
-  0xb5 : [Instruction12x, [ "and-int/2addr" ] ],
-  0xb6 : [Instruction12x, [ "or-int/2addr" ] ],
-  0xb7 : [Instruction12x, [ "xor-int/2addr" ] ],
-  0xb8 : [Instruction12x, [ "shl-int/2addr" ] ],
-  0xb9 : [Instruction12x, [ "shr-int/2addr" ] ],
-  0xba : [Instruction12x, [ "ushr-int/2addr" ] ],
-  0xbb : [Instruction12x, [ "add-long/2addr" ] ],
-  0xbc : [Instruction12x, [ "sub-long/2addr" ] ],
-  0xbd : [Instruction12x, [ "mul-long/2addr" ] ],
-  0xbe : [Instruction12x, [ "div-long/2addr" ] ],
-  0xbf : [Instruction12x, [ "rem-long/2addr" ] ],
-  0xc0 : [Instruction12x, [ "and-long/2addr" ] ],
-  0xc1 : [Instruction12x, [ "or-long/2addr" ] ],
-  0xc2 : [Instruction12x, [ "xor-long/2addr" ] ],
-  0xc3 : [Instruction12x, [ "shl-long/2addr" ] ],
-  0xc4 : [Instruction12x, [ "shr-long/2addr" ] ],
-  0xc5 : [Instruction12x, [ "ushr-long/2addr" ] ],
-  0xc6 : [Instruction12x, [ "add-float/2addr" ] ],
-  0xc7 : [Instruction12x, [ "sub-float/2addr" ] ],
-  0xc8 : [Instruction12x, [ "mul-float/2addr" ] ],
-  0xc9 : [Instruction12x, [ "div-float/2addr" ] ],
-  0xca : [Instruction12x, [ "rem-float/2addr" ] ],
-  0xcb : [Instruction12x, [ "add-double/2addr" ] ],
-  0xcc : [Instruction12x, [ "sub-double/2addr" ] ],
-  0xcd : [Instruction12x, [ "mul-double/2addr" ] ],
-  0xce : [Instruction12x, [ "div-double/2addr" ] ],
-  0xcf : [Instruction12x, [ "rem-double/2addr" ] ],
+	def show(self, pos):
+		print self.show_buff(pos)
 
-  0xd0 : [Instruction22s, [ "add-int/lit16" ] ],
-  0xd1 : [Instruction22s, [ "rsub-int" ] ],
-  0xd2 : [Instruction22s, [ "mul-int/lit16" ] ],
-  0xd3 : [Instruction22s, [ "div-int/lit16" ] ],
-  0xd4 : [Instruction22s, [ "rem-int/lit16" ] ],
-  0xd5 : [Instruction22s, [ "and-int/lit16" ] ],
-  0xd6 : [Instruction22s, [ "or-int/lit16" ] ],
-  0xd7 : [Instruction22s, [ "xor-int/lit16" ] ],
+	def get_length(self):
+		return ((self.size * self.element_width + 1) / 2 + 4) * 2
+
+	def get_raw(self):
+		return pack("=H", self.ident) + pack("=H", self.element_width) + pack("=I", self.size) + self.data
 
 
-  0xd8 : [Instruction22b, [ "add-int/lit8" ] ],
-  0xd9 : [Instruction22b, [ "rsub-int/lit8" ] ],
-  0xda : [Instruction22b, [ "mul-int/lit8" ] ],
-  0xdb : [Instruction22b, [ "div-int/lit8" ] ],
-  0xdc : [Instruction22b, [ "rem-int/lit8" ] ],
-  0xdd : [Instruction22b, [ "and-int/lit8" ] ],
-  0xde : [Instruction22b, [ "or-int/lit8" ] ],
-  0xdf : [Instruction22b, [ "xor-int/lit8" ] ],
-  0xe0 : [Instruction22b, [ "shl-int/lit8" ] ],
-  0xe1 : [Instruction22b, [ "shr-int/lit8" ] ],
-  0xe2 : [Instruction22b, [ "ushr-int/lit8" ] ],
-
-
-  # expanded opcodes
-  0xe3 : [Instruction22c, [ "iget-volatile", KIND_FIELD ] ],
-  0xe4 : [Instruction22c, [ "iput-volatile", KIND_FIELD ] ],
-  0xe5 : [Instruction21c, [ "sget-volatile", KIND_FIELD ] ],
-  0xe6 : [Instruction21c, [ "sput-volatile", KIND_FIELD ] ],
-  0xe7 : [Instruction22c, [ "iget-object-volatile", KIND_FIELD ] ],
-  0xe8 : [Instruction22c, [ "iget-wide-volatile", KIND_FIELD ] ],
-  0xe9 : [Instruction22c, [ "iput-wide-volatile", KIND_FIELD ] ],
-  0xea : [Instruction21c, [ "sget-wide-volatile", KIND_FIELD ] ],
-  0xeb : [Instruction21c, [ "sput-wide-volatile", KIND_FIELD ] ],
-
-  0xec : [Instruction10x,   [ "breakpoint" ] ],
-  0xed : [Instruction20bc,  [ "throw-verification-error", VARIES ] ],
-  0xee : [Instruction35mi,  [ "execute-inline", INLINE_METHOD ] ],
-  0xef : [Instruction3rmi,  [ "execute-inline/range", INLINE_METHOD ] ],
-  0xf0 : [Instruction35c,   [ "invoke-object-init/range", KIND_METH ] ],
-  0xf1 : [Instruction10x,   [ "return-void-barrier" ] ],
-
-  0xf2 : [Instruction22cs,  [ "iget-quick", FIELD_OFFSET ] ],
-  0xf3 : [Instruction22cs,  [ "iget-wide-quick", FIELD_OFFSET ] ],
-  0xf4 : [Instruction22cs,  [ "iget-object-quick", FIELD_OFFSET ] ],
-  0xf5 : [Instruction22cs,  [ "iput-quick", FIELD_OFFSET ] ],
-  0xf6 : [Instruction22cs,  [ "iput-wide-quick", FIELD_OFFSET ] ],
-  0xf7 : [Instruction22cs,  [ "iput-object-quick", FIELD_OFFSET ] ],
-  0xf8 : [Instruction35ms,  [ "invoke-virtual-quick", VTABLE_OFFSET ] ],
-  0xf9 : [Instruction3rms,  [ "invoke-virtual-quick/range", VTABLE_OFFSET ] ],
-  0xfa : [Instruction35ms,  [ "invoke-super-quick", VTABLE_OFFSET ] ],
-  0xfb : [Instruction3rms,  [ "invoke-super-quick/range", VTABLE_OFFSET ] ],
-  0xfc : [Instruction22c,   [ "iput-object-volatile", KIND_FIELD ] ],
-  0xfd : [Instruction21c,   [ "sget-object-volatile", KIND_FIELD ] ],
-  0xfe : [Instruction21c,   [ "sput-object-volatile", KIND_FIELD ] ],
+DALVIK_OPCODES_PAYLOAD = {
+	0x0100 : [PackedSwitch],
+	0x0200 : [SparseSwitch],
+	0x0300 : [FillArrayData],
 }
 
 def get_access_flags_string(value):
@@ -362,16 +296,17 @@ def get_type(atype, size=None):
 	return res	
 
 def get_instruction(cm, op_value, buff, odex=False):
-	try:
-		if not odex and (op_value >= 0xe3 and op_value <= 0xfe):
-			return InstructionInvalid(cm, buff)
+	print "opcode ", op_value
+	if not odex and (op_value >= 0xe3 and op_value <= 0xfe):
+		return InstructionInvalid(cm, buff)
 
-		try:
-			return DALVIK_OPCODES_FORMAT[op_value][0](cm, buff)
-		except KeyError:
-			return InstructionInvalid(cm, buff)
-	except:
-		return Unresolved(cm, buff)
+	try:
+		print "point 3"
+		return dexinstructions.DALVIK_OPCODES_FORMAT[op_value][0](cm, buff)
+	except KeyError:
+		return InstructionInvalid(cm, buff)
+	#except:
+	#	return dexinstructions.Unresolved(cm, buff)
 
 def get_instruction_payload(op_value, buff):
 	return DALVIK_OPCODES_PAYLOAD[op_value][0]( buff )
@@ -629,6 +564,20 @@ class MethodIdItem(object):
 		self.proto_idx_value = self.__CM.get_proto(self.proto_idx)
 		self.name_idx_value = self.__CM.get_string(self.name_idx)
 
+	def get_class_name(self):
+		return self.class_idx_value
+
+	def get_name(self):
+		return self.name_idx_value
+
+	def get_proto(self):
+		return self.proto_idx_value
+
+	def get_descriptor(self):
+		proto = self.get_proto()
+		return proto[0] + proto[1]
+
+
 class MethodHIdItem(object):
 	"""
 	"""
@@ -648,6 +597,12 @@ class MethodHIdItem(object):
 	def reload(self):
 		for i in self.methods:
 			i.reload()
+
+	def get(self, idx):
+		try:
+			return self.methods[ idx ]
+		except IndexError:
+			return MethodIdItemInvalid()
 
 class ClassDefItem(dexobject.DexObject):
 	"""
@@ -851,7 +806,6 @@ class ClassManager(object):
 		if item != None:
 			if isinstance(item, list):
 				for i in item:
-					print i
 					goff = i.offset
 					self.__manage_item_off.append(goff)
 					self.__obj_offset[i.get_off()] = i
@@ -890,6 +844,20 @@ class ClassManager(object):
 		for i in self.__manage_item["TYPE_ENCODED_ARRAY_ITEM"]:
 			if i.get_off() == off:
 				return i
+
+	def get_raw_string(self, idx):
+		try:
+			off = self.__manage_item["TYPE_STRING_ID_ITEM"][idx].get_string_data_off()
+		except IndexError:
+			warning("unknown index")
+			return "Invalid String"
+
+		try:
+			return self.__strings_off[off].get()
+		except KeyError:
+			warning("Unknown string item")
+			return "Invalid String"
+
 
 class HeaderItem(object):
 	def __init__(self, size, buff, cm):
@@ -1093,7 +1061,8 @@ class MapItem(object):
 		return self.size
 
 	def next(self, buff, cm):
-		debug("%s @ 0x%x(%d) %x %x" % (TYPE_MAP_ITEM[self.type], buff.get_idx(), buff.get_idx(), self.size, self.offset))
+		debug_str = "%s @ 0x%x(%d) %x %x" % (TYPE_MAP_ITEM[self.type], buff.get_idx(), buff.get_idx(), self.size, self.offset)
+		print debug_str
 
 		if TYPE_MAP_ITEM[self.type] == "TYPE_STRING_ID_ITEM":
 			print "TYPE_STRING_ID_ITEM"
@@ -1140,6 +1109,7 @@ class MapItem(object):
 			self.item = [dexobject.AnnotationsDirectoryItem(buff, cm) for i in xrange(0, self.size) ]
 
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_ANNOTATION_SET_REF_LIST":
+			print "TYPE_ANNOTATION_SET_REF_LIST"
 			self.item = [dexobject.AnnotationSetRefList(buff, cm) for i in xrange(0, self.size)]
 
 		elif TYPE_MAP_ITEM[self.type] == "TYPE_TYPE_LIST":
@@ -1201,6 +1171,7 @@ class MapList(object):
 		self.size = unpack("=I", buff.read(4))[0]
 		self.map_item = []
 
+		#print "inside MapList; offset : ", self.offset, " size : ", self.size
 		for i in xrange(0, self.size):
 			idx = buff.get_idx()
 			mi = MapItem(buff, self.CM)
@@ -1235,6 +1206,66 @@ class MapList(object):
 			if i.item != self:
 				i.show()
 
+class TryItem(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.offset = buff.get_idx()
+		print "inside try item : ", self.offset
+		self.__CM = cm
+		self.start_addr = unpack("=I", buff.read(4))[0]
+		self.insn_count = unpack("=H", buff.read(2))[0]
+		self.handler_off = unpack("=H", buff.read(2))[0]
+
+	def set_offset(self, off):
+		self.offset = off
+
+	def get_off(self):
+		return self.offset
+
+class EncodedTypeAddrPair(object):
+	"""
+	"""
+	def __init__(self, buff):
+		self.offset = buff.get_idx()
+
+		print "EncodedTypeAddrPair : ", self.offset
+		self.type_idx = bytecode.readuleb128(buff)
+		self.addr = bytecode.readuleb128(buff)
+
+class EncodedCatchHandler(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.offset = buff.get_idx()
+
+		self.size = bytecode.readuleb128(buff)
+		if self.size > 0x3f:
+			self.size = self.size - 128
+		self.handlers = []
+
+		print "EncodedCatchHandler : ", self.offset, " : ", self.size
+
+		for i in xrange(0, abs(self.size)):
+			self.handlers.append( EncodedTypeAddrPair(buff))
+
+		if self.size <= 0:
+			self.catch_all_addr = bytecode.readuleb128(buff)
+
+
+class EncodedCatchHandlerList(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.offset = buff.get_idx()
+
+		print "EncodedCatchHandlerList : ", self.offset
+		self.size = bytecode.readuleb128(buff)
+		self.list = []
+
+		for i in xrange(0, self.size):
+			self.list.append(EncodedCatchHandler(buff, cm))
+
 class DalvikCode(object):
 	"""
 		This class represents the instructions of a method
@@ -1243,6 +1274,8 @@ class DalvikCode(object):
 		self.__CM = cm
 		self.offset = buff.get_idx()
 
+		#print "offset : ", self.offset
+		
 		self.int_padding = ""
 		off = buff.get_idx()
 		while off % 4 != 0:
@@ -1251,7 +1284,7 @@ class DalvikCode(object):
 		buff.set_idx(off)
 
 		self.__off = buff.get_idx()
-
+		#print "debug offset : ", self.__off
 		self.registers_size = unpack("=H", buff.read(2))[0]
 		self.ins_size = unpack("=H", buff.read(2))[0]
 		self.outs_size = unpack("=H", buff.read(2))[0]
@@ -1261,6 +1294,8 @@ class DalvikCode(object):
 
 		ushort = calcsize('=H')
 
+		#print "read size : ", self.insns_size * ushort
+
 		self.code = DCode(self.__CM, buff.get_idx(), self.insns_size, buff.read(self.insns_size * ushort))
 
 		if (self.insns_size % 2 == 1):
@@ -1268,6 +1303,11 @@ class DalvikCode(object):
 
 		self.tries = []
 		self.handlers = None
+		if self.tries_size > 0:
+			for i in xrange(0, self.tries_size):
+				self.tries.append(TryItem(buff, self.__CM))
+
+			self.handlers = EncodedCatchHandlerList(buff, self.__CM)
 
 	def get_registers_size(self):
 		return self.registers_size
@@ -1423,7 +1463,7 @@ class LinearSweepAlgorithm(object):
 					except struct.error:
 						warning("error while decoding instruction ...")
 
-				elif op_value in DALVIK_OPCODES_EXTENDED_WIDTH:
+				elif op_value in dexinstructions.DALVIK_OPCODES_EXTENDED_WIDTH:
 					try:
 						obj = get_extented_instruction(cm, op_value, insn[idx:])
 						classic_instruction = False
@@ -1448,6 +1488,7 @@ class LinearSweepAlgorithm(object):
 class DalvikVMFormat(bytecode._Bytecode):
 	def __init__(self, buff, decompiler=None, config=None):
 		super(DalvikVMFormat, self).__init__(buff)
+
 		self.config = config
 		if not self.config:
 			self.config = { "RECODE_ASCII_STRING": CONF["RECODE_ASCII_STRING"],
@@ -1464,6 +1505,7 @@ class DalvikVMFormat(bytecode._Bytecode):
 		pass
 
 	def _load(self, buff):
+		print "inside _load (DalvikVMFormat)"
 		self.__header = HeaderItem(0, self, ClassManager(None, self.config))
 
 		if self.__header.map_off == 0:

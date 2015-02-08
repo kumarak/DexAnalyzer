@@ -546,14 +546,56 @@ class AnnotationSetRefItem(DexObject):
 	"""
 	def __init__(self, buff, cm):
 		DexObject.__init__(self, buff, cm)
-		self.annotations_off = unpack("=H", buff.read(2))[0]
+
+		print "inside AnnotationSetRefItem : ", self.get_off() 
+		self.annotations_off = unpack("=I", buff.read(4))[0]
+
+
 
 class AnnotationSetRefList(DexObject):
 	"""
 	"""
 	def __init__(self, buff, cm):
-		DexObject.__init__(self, buff, cm)
+		#DexObject.__init__(self, buff, cm)
+		self.offset = buff.get_idx()
+
+		self.__CM = cm
 		self.list = []
 		self.size = unpack("=I", buff.read(4))[0]
+
+		print "inside AnnotationSetRefList, size : ", self.size, " : ", self.offset
 		for i in xrange(0, self.size):
 			self.list.append(AnnotationSetRefItem(buff, cm))
+
+
+
+class MethodAnnotation(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.offset = buff.get_idx()
+
+		self.__CM = cm 
+		self.method_idx = unpack("=I", buff.read(4))[0]
+		self.annotations_off = unpack("=I", buff.read(4))[0]
+
+
+class FieldAnnotation(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+		self.offset = buff.get_idx()
+
+		self.field_idx = unpack("=I", buff.read(4))[0]
+		self.annotations_off = unpack("=I", buff.read(4))[0]
+
+class ParameterAnnotation(object):
+	"""
+	"""
+	def __init__(self, buff, cm):
+		self.__CM = cm
+
+		self.offset = buff.get_idx()
+		self.param_idx = unpack("=I", buff.read(4))[0]
+		self.annotations_off = unpack("=I", buff.read(4))[0]

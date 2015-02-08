@@ -2,6 +2,7 @@
 
 from autoconf import CONF
 
+import sys, traceback
 import hashlib
 
 
@@ -31,14 +32,6 @@ class SV(object):
 
 class _Bytecode(object):
 	def __init__(self, buff):
-		print "init Bytecode"
-		try:
-			import psyco
-			psyco.full()
-		except ImportError:
-			print "Import Error inside Bytecode"
-			pass
-
 		self.__buff = buff
 		self.__idx = 0
 
@@ -50,7 +43,9 @@ class _Bytecode(object):
 
 		buff = self.__buff[self.__idx : self.__idx + size]
 		self.__idx += size
-		#print "current index : ", self.__idx
+		#print "current index : ", self.__idx, " : size : ", size
+		if size > 20000:
+			traceback.print_exc()
 		return buff
 
 	def readat(self, off):
@@ -100,21 +95,27 @@ def _PrintDefault(msg):
 
 def readuleb128(buff):
 	result = ord(buff.read(1))
+	#print "checkpoint 1 : ", result
 	if result > 0x7f:
 		cur = ord(buff.read(1))
 		result = (result & 0x7f) | ((cur & 0x7f) << 7)
+		#print "checkpoint 2 : ", result
 		if cur > 0x7f:
 			cur = ord(buff.read(1))
 			result |= (cur & 0x7f) << 14
+			#print "checkpoint 3 : ", result
 			if cur > 0x7f:
 				cur = ord(buff.read(1))
 				result |= (cur & 0x7f) << 21
+				#print "checkpoint 4 : ", result
 				if cur > 0x7f:
 					cur = ord(buff.read(1))
 					if cur > 0x0f:
 						warning("passible error while decoding")
 					result |= cur << 28
+					#print "checkpoint 5 : ", result
 
+	#print "checkpoint 6 : ", result
 	return result
 
 def utf8_to_string(buff, length):
