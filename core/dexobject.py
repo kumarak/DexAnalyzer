@@ -341,19 +341,18 @@ class ClassDataItem(DexObject):
 	"""
 	def __init__(self, buff, cm):
 		DexObject.__init__(self, buff, cm)
-		print "init class data item"
+		#print "init class data item"
 		self.static_fields_size = bytecode.readuleb128(buff)
-		print "static field size ", self.static_fields_size
+		#print "static field size ", self.static_fields_size
 
 		self.instance_fields_size = bytecode.readuleb128(buff)
-		print "instace_fields_size : ", self.instance_fields_size
+		#print "instace_fields_size : ", self.instance_fields_size
 
 		self.direct_methods_size = bytecode.readuleb128(buff)
-		print "direct methods size : ", self.direct_methods_size
+		#print "direct methods size : ", self.direct_methods_size
 
 		self.virtual_methods_size = bytecode.readuleb128(buff)
-
-		print "end class data item"
+		#print "end class data item"
 
 		self.static_fields = []
 		self.instance_fields = []
@@ -367,7 +366,7 @@ class ClassDataItem(DexObject):
 
 	def _load_elements(self, size, l, Type, buff, cm):
 		prev = 0
-		print "load_element : ", size
+		#print "load_element : ", size
 		for i in xrange(0, size):
 			el = Type(buff, cm)
 			el.adjust_idx(prev)
@@ -502,8 +501,9 @@ class TypeItem(DexObject):
 		return self.CM.get_type(self.type_idx)
 
 	def show(self):
-		bytecode._PrintSubBanner("Type Item")
-		bytecode._PrintDefault("type_idx=%d\n" % self.type_idx)
+		pass
+		#bytecode._PrintSubBanner("Type Item")
+		#bytecode._PrintDefault("type_idx=%d\n" % self.type_idx)
 
 class TypeList(DexObject):
 	"""
@@ -535,8 +535,8 @@ class TypeList(DexObject):
 		return ' '.join(i.get_string() for i in self.list)
 
 	def show(self):
-		bytecode._PrintSubBanner("Type List")
-		bytecode._PrintDefault("size=%d\n" % self.size)
+		#bytecode._PrintSubBanner("Type List")
+		#bytecode._PrintDefault("size=%d\n" % self.size)
 
 		for i in self.list:
 			i.show()
@@ -547,7 +547,7 @@ class AnnotationSetRefItem(DexObject):
 	def __init__(self, buff, cm):
 		DexObject.__init__(self, buff, cm)
 
-		print "inside AnnotationSetRefItem : ", self.get_off() 
+		#print "inside AnnotationSetRefItem : ", self.get_off() 
 		self.annotations_off = unpack("=I", buff.read(4))[0]
 
 
@@ -563,7 +563,7 @@ class AnnotationSetRefList(DexObject):
 		self.list = []
 		self.size = unpack("=I", buff.read(4))[0]
 
-		print "inside AnnotationSetRefList, size : ", self.size, " : ", self.offset
+		#print "inside AnnotationSetRefList, size : ", self.size, " : ", self.offset
 		for i in xrange(0, self.size):
 			self.list.append(AnnotationSetRefItem(buff, cm))
 

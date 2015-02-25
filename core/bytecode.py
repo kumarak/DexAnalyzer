@@ -35,7 +35,7 @@ class _Bytecode(object):
 		self.__buff = buff
 		self.__idx = 0
 
-		print "buff length : ", len(buff)
+		#print "buff length : ", len(buff)
 
 	def read(self, size):
 		if isinstance(size, SV):

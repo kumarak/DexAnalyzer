@@ -296,12 +296,12 @@ def get_type(atype, size=None):
 	return res	
 
 def get_instruction(cm, op_value, buff, odex=False):
-	print "opcode ", op_value
+	#print "opcode ", op_value
 	if not odex and (op_value >= 0xe3 and op_value <= 0xfe):
 		return InstructionInvalid(cm, buff)
 
 	try:
-		print "point 3"
+		#print "point 3"
 		return dexinstructions.DALVIK_OPCODES_FORMAT[op_value][0](cm, buff)
 	except KeyError:
 		return InstructionInvalid(cm, buff)
@@ -352,8 +352,9 @@ class TypeIdItem(object):
 		return self.descriptor_idx
 
 	def show(self):
-		bytecode._PrintSubBanner("Type Id Item")
-		bytecode._PrintDefault("descriptor_idx=%d descriptor_idx_value=%s\n" % (self.descriptor_idx, self.descriptor_idx_value))
+		pass
+		#bytecode._PrintSubBanner("Type Id Item")
+		#bytecode._PrintDefault("descriptor_idx=%d descriptor_idx_value=%s\n" % (self.descriptor_idx, self.descriptor_idx_value))
 
 	def reload(self):
 		self.descriptor_idx_value = self.__CM.get_string(self.descriptor_idx)
@@ -391,7 +392,7 @@ class TypeHIdItem(object):
 			i.reload()
 
 	def show(self):
-		bytecode._PrintSubBanner("Type List Item")
+		#bytecode._PrintSubBanner("Type List Item")
 		for i in self.type:
 			i.show()
 
@@ -795,6 +796,7 @@ class ClassManager(object):
 		return [proto.get_parameters_off_value(), proto.get_return_type_idx_value()]
 
 	def add_type_item(self, type_item, c_item, item):
+		print "adding item to manage_item"
 		self.__manage_item[type_item] = item
 		self.__obj_offset[c_item.get_off()] = c_item
 		self.__item_offset[c_item.get_offset()] = item
@@ -1024,8 +1026,9 @@ class StringDataItem(object):
 		return self.data
 
 	def show(self):
-		bytecode._PrintSubBanner("String Data Item")
-		bytecode._PrintDefault("utf16_size=%d data=%s\n" % (self.utf16_size, repr( self.data )))
+		#bytecode._PrintSubBanner("String Data Item")
+		#bytecode._PrintDefault("utf16_size=%d data=%s\n" % (self.utf16_size, repr( self.data )))
+		pass
 
 class MapItem(object):
 	def __init__(self, buff, cm):
@@ -1062,7 +1065,7 @@ class MapItem(object):
 
 	def next(self, buff, cm):
 		debug_str = "%s @ 0x%x(%d) %x %x" % (TYPE_MAP_ITEM[self.type], buff.get_idx(), buff.get_idx(), self.size, self.offset)
-		print debug_str
+		#print debug_str
 
 		if TYPE_MAP_ITEM[self.type] == "TYPE_STRING_ID_ITEM":
 			print "TYPE_STRING_ID_ITEM"
@@ -1211,7 +1214,7 @@ class TryItem(object):
 	"""
 	def __init__(self, buff, cm):
 		self.offset = buff.get_idx()
-		print "inside try item : ", self.offset
+		#print "inside try item : ", self.offset
 		self.__CM = cm
 		self.start_addr = unpack("=I", buff.read(4))[0]
 		self.insn_count = unpack("=H", buff.read(2))[0]
@@ -1229,7 +1232,7 @@ class EncodedTypeAddrPair(object):
 	def __init__(self, buff):
 		self.offset = buff.get_idx()
 
-		print "EncodedTypeAddrPair : ", self.offset
+		#print "EncodedTypeAddrPair : ", self.offset
 		self.type_idx = bytecode.readuleb128(buff)
 		self.addr = bytecode.readuleb128(buff)
 
@@ -1244,7 +1247,7 @@ class EncodedCatchHandler(object):
 			self.size = self.size - 128
 		self.handlers = []
 
-		print "EncodedCatchHandler : ", self.offset, " : ", self.size
+		#print "EncodedCatchHandler : ", self.offset, " : ", self.size
 
 		for i in xrange(0, abs(self.size)):
 			self.handlers.append( EncodedTypeAddrPair(buff))
@@ -1259,7 +1262,7 @@ class EncodedCatchHandlerList(object):
 	def __init__(self, buff, cm):
 		self.offset = buff.get_idx()
 
-		print "EncodedCatchHandlerList : ", self.offset
+		#print "EncodedCatchHandlerList : ", self.offset
 		self.size = bytecode.readuleb128(buff)
 		self.list = []
 
@@ -1274,8 +1277,6 @@ class DalvikCode(object):
 		self.__CM = cm
 		self.offset = buff.get_idx()
 
-		#print "offset : ", self.offset
-		
 		self.int_padding = ""
 		off = buff.get_idx()
 		while off % 4 != 0:
@@ -1325,10 +1326,13 @@ class DalvikCode(object):
 
 		bytecode._PrintBanner()
 
+	def _end_show(self):
+		bytecode._PrintBanner()
+
 	def show(self):
-		#self._begin_show()
+		self._begin_show()
 		self.code.show()
-		#self._end_show()
+		self._end_show()
 
 	def reload(self):
 		self.code.reload()
@@ -1399,12 +1403,12 @@ class DCode(object):
 	def show(self):
 		nb = 0
 		idx = 0
-		print "offset : ", self.offset
+		#print "offset : ", self.offset
 		for i in self.get_instructions():
-			print i
-			print "%-8d(%08x)" % (nb, idx)
+			#print i
+			print "%-8d(%08x)" % (nb, idx) 
 			i.show(nb)
-			print 
+			#print 
 			idx += i.get_length()
 			nb += 1
 
@@ -1505,7 +1509,7 @@ class DalvikVMFormat(bytecode._Bytecode):
 		pass
 
 	def _load(self, buff):
-		print "inside _load (DalvikVMFormat)"
+		#print "inside _load (DalvikVMFormat)"
 		self.__header = HeaderItem(0, self, ClassManager(None, self.config))
 
 		if self.__header.map_off == 0:

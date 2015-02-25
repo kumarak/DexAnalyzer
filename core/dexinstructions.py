@@ -2,6 +2,8 @@
 from StringIO import StringIO
 from struct import pack, unpack
 
+import inspect
+
 KIND_METH   = 0
 KIND_STRING = 1
 KIND_FIELD  = 2
@@ -57,7 +59,7 @@ def get_kind(cm, kind, value):
 
 class Instruction(object):
 	def get_kind(self):
-		print "debug opcode : ", self.OP
+		#print "debug opcode : ", self.OP
 		if self.OP > 0xff:
 			if self.OP >= 0xf2ff:
 				return DALVIK_OPCODES_OPTIMIZED[self.OP][1][1]
@@ -78,6 +80,7 @@ class Instruction(object):
 
 	def show(self, idx):
 		#print self
+		#print inspect.stack()
 		print self.get_name() + " " + self.get_output(idx)
 
 class Instruction21c(Instruction):
@@ -155,6 +158,15 @@ class Instruction10x(Instruction):
 	def get_length(self):
 		return 2
 
+	def get_output(self, idx=-1):
+		return ""
+
+	def get_operands(self, idx=-1):
+		return []
+
+	def get_raw(self):
+		return pack("=H", self.OP)
+
 class Instruction11x(Instruction):
 	"""
 	"""
@@ -168,6 +180,17 @@ class Instruction11x(Instruction):
 
 	def get_length(self):
 		return 2
+
+	def get_output(self, idx=-1):
+		buff = ""
+		buff += "v%d" % (self.AA)
+		return buff
+
+	def get_operands(self, idx=-1):
+		return [(OPERAND_REGISTER, self.AA)]
+
+	def get_raw(self):
+		return pack("=H", (self.AA << 8) | self.OP)
 
 
 class Instruction12x(Instruction):
@@ -184,6 +207,17 @@ class Instruction12x(Instruction):
 
 	def get_length(self):
 		return 2
+
+	def get_output(self, idx=-1):
+		buff = ""
+		buff += "v%d, v%d" % (self.A, self.B)
+		return buff
+
+	def get_operands(self, idx=-1):
+		return [(OPERAND_REGISTER, self.A), (OPERAND_REGISTER, self.B)]
+
+	def get_raw(self):
+		return pack("=H", (self.B << 12) | (self.A << 8) | self.OP)
 
 
 
@@ -300,6 +334,20 @@ class Instruction10t(Instruction):
 	def get_length(self):
 		return 2
 
+	def get_output(self, idx=-1):
+		buff = ""
+		buff += "%+x" % (self.AA)
+		return buff
+
+	def get_operands(self, idx=-1):
+		return [(OPERAND_OFFSET, self.AA)]
+
+	def get_ref_off(self):
+		return self.AA
+
+	def get_raw(self):
+		return pack("=Bb", self.OP, self.AA)
+
 class Instruction20t(Instruction):
 	"""
 	"""
@@ -412,7 +460,7 @@ class Instruction35c(Instruction):
 	"""
 	def __init__(self, cm, buff):
 		super(Instruction35c, self).__init__()
-		print "Instruction35c init"
+		#print "Instruction35c init"
 		self.cm = cm
 
 		i16 = unpack("=H", buff[0:2])[0]
